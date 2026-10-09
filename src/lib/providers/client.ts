@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 export const queryClient=new QueryClient({defaultOptions:{queries:{retry:false,staleTime:60000,gcTime:300000,refetchOnWindowFocus:false}}});
-export const rpcEndpoints={'PublicNode':'https://solana-rpc.publicnode.com','Solana public RPC':'https://api.mainnet-beta.solana.com'};
+export const rpcEndpoints={'PublicNode':'https://solana-rpc.publicnode.com','Solana public RPC':'https://public.rpc.solanavibestation.com'};
 export type RpcName=keyof typeof rpcEndpoints;
 export interface Progress {name:string;state:'loading'|'complete'|'error';detail?:string;}
 export type Update=(progress:Progress)=>void;
