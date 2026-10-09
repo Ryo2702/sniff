@@ -33,4 +33,4 @@
 .shared-row strong, .shared-row span { display: block; }
 .shared-row strong { color: #d2c6e7; font: 10px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shared-row span { color: var(--muted-2); font: 9px var(--mono); margin-top: 4px; }
-.shared-signal { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 5px; color: var(--violet); background: rgba(189,155,255,.12); }
+.shared-signal { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 5px; color: var(--violet); background: rgba(189,155,255,.12); }.shared-signal.shared-wallet { color: var(--red); background: rgba(242,121,110,.12); }

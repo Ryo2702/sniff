@@ -145,15 +145,26 @@ export function parseTransaction(
       typeof i.mint === "string"
     ) {
       if (i.mint === r.target.value) {
+        const signer = t.transaction.message.accountKeys.find((key) => key.signer)?.pubkey;
+        const deployer = signer ? addEntity(r, signer, "wallet", "Observed initializer signer") : undefined;
+        const findingId = `mint-init:${signature}:${index}`;
         addFinding(r, {
-          id: `mint-init:${signature}:${index}`,
+          id: findingId,
           title: "Mint initialization observed",
           description:
-            "This transaction initialized the mint. The fee payer or mint authority is not automatically the project deployer.",
-          entityIds: [r.root.id, te.id],
+            `${signer ? `Signer ${signer} initialized this mint. ` : "This transaction initialized the mint. "}A signer or fee payer is not automatically the project deployer or beneficial owner.`,
+          entityIds: [r.root.id, te.id, ...(deployer ? [deployer.id] : [])],
           source: src,
           category: "deployment",
         });
+        if (deployer)
+          r.relationships.push({
+            id: `deployer:${findingId}`,
+            from: deployer.id,
+            to: r.root.id,
+            type: "initialization",
+            findingId,
+          });
       } else if (
         t.transaction.message.accountKeys.some(
           (k) => k.signer && k.pubkey === r.target.value,

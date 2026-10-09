@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { addr, entity, type Snapshot } from '../src/lib/model';
 import { queryClient } from '../src/lib/providers/client';
-import { solana } from '../src/lib/providers/solana';
+import { parseTransaction, solana, type ParsedTransaction } from '../src/lib/providers/solana';
 
 const market = '6Scr6DJM5q3m58YfLm6zsNffMD5GByL5MgyMc4DUUXMX';
 const mint = '8sRoVmMeSw5aDF6AdS4RR1ro4X5y2Z5RapHzjYhpump';
@@ -44,5 +44,23 @@ describe('Solana route resolution', () => {
     expect(snapshot.token?.holders[0].owner).toBe('holder-wallet');
     expect(snapshot.relationships.some((item) => item.type === 'pool')).toBe(true);
     expect(snapshot.relationships.some((item) => item.from === 'solana:address:holder-wallet')).toBe(true);
+  });
+
+  it('attaches an observed mint-initializing signer for deployer follow-up', () => {
+    const deployer = 'Deployer111111111111111111111111111111111111';
+    const snapshot = { target: addr(mint), root: entity(addr(mint), 'token', 'PENG', true), entities: [], relationships: [], findings: [], transfers: [], at: new Date().toISOString(), warnings: [], coverage: '' } as Snapshot;
+    const transaction = {
+      slot: 9,
+      blockTime: 1,
+      meta: { err: null, preTokenBalances: [], postTokenBalances: [], innerInstructions: [] },
+      transaction: { message: { accountKeys: [{ pubkey: deployer, signer: true }, { pubkey: mint, signer: false }], instructions: [{ program: 'spl-token', parsed: { type: 'initializeMint', info: { mint } } }] } },
+    } as ParsedTransaction;
+
+    parseTransaction(snapshot, transaction, '4'.repeat(88));
+
+    const signer = snapshot.entities.find((item) => item.value === deployer);
+    expect(signer?.kind).toBe('wallet');
+    expect(snapshot.relationships).toContainEqual(expect.objectContaining({ from: signer?.id, to: snapshot.root.id, type: 'initialization' }));
+    expect(snapshot.findings.find((item) => item.category === 'deployment')?.entityIds).toContain(signer?.id);
   });
 });
