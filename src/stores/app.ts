@@ -12,7 +12,7 @@ interface AppState {
  navigate:(scene:Scene)=>void;run:(value:string,options?:{cursor?:string;stay?:boolean})=>Promise<Snapshot|undefined>;cancel:()=>void;select:(id:string)=>void;follow:(e:Entity)=>void;pin:(id:string)=>void;note:(id:string,text:string,group:string)=>void;setFilter:(key:string,value:string)=>void;setPositions:(positions:CaseFile['positions'])=>void;fresh:()=>void;open:(c:CaseFile,imported?:boolean)=>void;rename:(name:string)=>void;
 }
 let controller:AbortController|undefined;let generation=0;
-export const useApp=create<AppState>((set,get)=>({caseFile:newCase(),analysis:emptyAnalysis,scene:'lab',selected:'',input:'',busy:false,error:'',notice:'',progress:[],historyOpen:false,commandOpen:false,provider:'PublicNode',imported:false,saveStatus:'Local only',status:'idle',
+export const useApp=create<AppState>((set,get)=>({caseFile:newCase(),analysis:emptyAnalysis,scene:'lab',selected:'',input:'',busy:false,error:'',notice:'',progress:[],historyOpen:false,commandOpen:false,provider:'Solana public RPC',imported:false,saveStatus:'Local only',status:'idle',
  navigate:scene=>set({scene,caseFile:{...get().caseFile,scene},error:''}),
  run:async(value,options={})=>{
   let target:Target;try{target=classify(value);}catch(e){set({error:e instanceof Error?e.message:'Invalid input',status:'error'});return;}
