@@ -71,7 +71,7 @@ const sceneMeta: Record<Scene, { label: string; eyebrow: string; icon: typeof Ho
   wallet: { label: 'Wallet Autopsy', eyebrow: 'Account evidence', icon: WalletCards },
   token: { label: 'Token Crime Scene', eyebrow: 'Asset evidence', icon: Fingerprint },
   trail: { label: 'Money Trail', eyebrow: 'Transfer tracing', icon: GitBranch },
-  social: { label: 'Social Footprint', eyebrow: 'Public metadata', icon: Globe2 },
+  social: { label: 'Connected Accounts', eyebrow: 'Project accounts', icon: Globe2 },
   ocr: { label: 'Screenshot Forensics', eyebrow: 'Local extraction', icon: FileImage },
   evidence: { label: 'Evidence Board', eyebrow: 'Saved locally', icon: LayoutGrid },
 };
@@ -398,8 +398,26 @@ function TrailScene({ data, onSelect, onFollow, onNavigate }: { data: ReturnType
 }
 
 function SocialScene({ data, onFollow, onNavigate }: { data: ReturnType<typeof useCaseData>; onFollow: (entity: Entity) => void; onNavigate: (scene: Scene) => void }) {
-  const links = data.entities.filter((entity) => entity.kind === 'website' || entity.kind === 'social'); const rows = links.map((entity) => ({ entity, relations: data.relationships.filter((relation) => relation.to === entity.id || relation.from === entity.id) }));
-  return <section className="scene"><SceneHeading eyebrow="06 / PUBLIC METADATA" title="Social footprint" description="Compare advertised domains and profiles from supported public metadata. A shared link is an overlap, not proof of common control." actions={<button className="secondary-button compact" onClick={() => onNavigate('lab')}><Search size={14} /> Investigate a URL</button>} /><div className="social-disclaimer"><div className="disclaimer-icon"><Globe2 size={19} /></div><div><strong>Browser access is intentionally limited</strong><span>Direct websites and X pages may block CORS or require authentication. SNIFF only reports indexed metadata or HTML that the browser can actually read.</span></div><span className="evidence-chip metadata">Metadata only</span></div>{rows.length ? <div className="social-grid">{rows.map(({ entity, relations }) => <div className="social-card" key={entity.id}><div className="social-card-head"><div className={`social-icon ${entity.kind}`}>{entity.kind === 'social' ? '𝕏' : '↗'}</div><div><span className="entity-badge badge-metadata">{kindLabels[entity.kind]}</span><h3>{entity.label}</h3></div></div><div className="mono-value">{entity.value}</div><div className="social-card-foot"><span><Link2 size={13} /> {relations.length} observed reference{relations.length === 1 ? '' : 's'}</span><button className="text-button" onClick={() => onFollow(entity)}>Inspect <ChevronRight size={14} /></button></div></div>)}</div> : <EmptyState icon={<Globe2 size={30} />} title="No public links in this case" description="Investigate a token mint, website, or X profile to search supported metadata sources." action="Open Sniff Lab" onAction={() => onNavigate('lab')} />}</section>;
+  const links = data.entities.filter((entity) => entity.kind === 'website' || entity.kind === 'social');
+  const rows = links.map((entity) => {
+    const relations = data.relationships.filter((relation) => relation.to === entity.id || relation.from === entity.id);
+    const projects = [...new Map(relations.flatMap((relation) => [relation.from, relation.to]).map((id) => data.entities.find((candidate) => candidate.id === id)).filter((candidate): candidate is Entity => Boolean(candidate && candidate.id !== entity.id && candidate.kind === 'token')).map((project) => [project.id, project])).values()];
+    const findings = data.findings.filter((finding) => finding.entityIds.includes(entity.id));
+    const label = entity.kind === 'social' ? socialHandle(entity.value) : domain(entity.value);
+    return { entity, relations, projects, findings, label };
+  });
+  const socialCount = rows.filter(({ entity }) => entity.kind === 'social').length;
+  const websiteCount = rows.filter(({ entity }) => entity.kind === 'website').length;
+  return <section className="scene"><SceneHeading eyebrow="06 / CONNECTED ACCOUNTS" title="Connected accounts" description="See the public X/Twitter profiles and websites that projects advertise, which tokens reference them, and exactly where each relationship came from." actions={<button className="secondary-button compact" onClick={() => onNavigate('lab')}><Search size={14} /> Investigate a URL</button>} /><div className="social-disclaimer"><div className="disclaimer-icon"><Globe2 size={19} /></div><div><strong>Public account detection, not account login</strong><span>SNIFF detects X/Twitter and website links from DEX Screener metadata or readable public HTML. It does not claim that the project controls the account, and it does not perform X OAuth.</span></div><span className="evidence-chip metadata">{socialCount} X · {websiteCount} web</span></div>{rows.length ? <><div className="account-summary"><span><strong>{socialCount}</strong><small>X / Twitter accounts</small></span><span><strong>{websiteCount}</strong><small>websites</small></span><span><strong>{new Set(rows.flatMap(({ projects }) => projects.map((project) => project.id))).size}</strong><small>linked tokens</small></span></div><div className="social-grid">{rows.map(({ entity, relations, projects, findings, label }) => <div className="social-card" key={entity.id}><div className="social-card-head"><div className={`social-icon ${entity.kind}`}>{entity.kind === 'social' ? '𝕏' : '↗'}</div><div><span className="entity-badge badge-metadata">{entity.kind === 'social' ? 'X / Twitter account' : 'Website domain'}</span><h3>{label}</h3></div></div><a className="mono-value account-url" href={entity.value} target="_blank" rel="noreferrer">{entity.value}<ExternalLink size={12} /></a><div className="account-status"><BadgeCheck size={13} /> Public link detected · {findings[0]?.source.provider ?? 'saved case evidence'}</div><div className="linked-projects"><span>Linked token projects</span>{projects.length ? projects.map((project) => <button key={project.id} onClick={() => onFollow(project)}>{short(project.label || project.value, 20)}<ChevronRight size={12} /></button>) : <small>No token project is attached to this reference yet.</small>}</div><div className="social-card-foot"><span><Link2 size={13} /> {relations.length} observed reference{relations.length === 1 ? '' : 's'}</span><button className="text-button" onClick={() => onFollow(entity)}>Investigate <ChevronRight size={14} /></button></div></div>)}</div></> : <EmptyState icon={<Globe2 size={30} />} title="No public accounts in this case" description="Investigate a token mint, website, or X profile to detect published project accounts." action="Open Sniff Lab" onAction={() => onNavigate('lab')} />}</section>;
+}
+
+function socialHandle(value: string) {
+  try {
+    const segment = new URL(value).pathname.split('/').filter(Boolean)[0];
+    return segment ? `@${segment}` : value;
+  } catch {
+    return value;
+  }
 }
 
 function SharedEvidencePanel({ data, onSelect }: { data: ReturnType<typeof useCaseData>; onSelect: (id: string) => void }) {

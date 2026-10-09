@@ -20,6 +20,13 @@ describe('SNIFF shell', () => {
     expect(screen.getByText('No scent map yet')).toBeTruthy();
   });
 
+  it('labels public X and website references as connected accounts', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Connected Accounts' }));
+    expect(screen.getByRole('heading', { name: 'Connected accounts' })).toBeTruthy();
+    expect(screen.getByText('Public account detection, not account login')).toBeTruthy();
+  });
+
   it('keeps the browser wallet picker limited to Phantom and Solflare', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Connect wallet' }));
