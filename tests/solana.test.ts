@@ -27,7 +27,8 @@ describe('Solana route resolution', () => {
         const programId = (body.params[1] as { programId: string }).programId;
         return response({ value: programId === tokenProgram ? [{ pubkey: 'token-account', account: { lamports: 1, owner: tokenProgram, executable: false, data: { parsed: { type: 'account', info: { mint, tokenAmount: { amount: '100', decimals: 6 } } } } } }] : [] });
       }
-      if (body.method === 'getTokenLargestAccounts') return response({ context: { slot: 3 }, value: [] });
+      if (body.method === 'getTokenLargestAccounts') return response({ context: { slot: 3 }, value: [{ address: 'holder-account', amount: '500000' }] });
+      if (body.method === 'getMultipleAccounts') return response({ context: { slot: 4 }, value: [{ lamports: 1, owner: tokenProgram, executable: false, data: { parsed: { type: 'account', info: { owner: 'holder-wallet' } } } }] });
       if (body.method === 'getSignaturesForAddress') return response([]);
       throw new Error(`Unexpected RPC method: ${body.method}`);
     });
@@ -39,6 +40,9 @@ describe('Solana route resolution', () => {
     expect(snapshot.root.kind).toBe('token');
     expect(snapshot.token?.name).toBe('PENG');
     expect(snapshot.entities.some((item) => item.kind === 'pool' && item.value === market)).toBe(true);
+    expect(snapshot.entities.some((item) => item.kind === 'wallet' && item.value === 'holder-wallet')).toBe(true);
+    expect(snapshot.token?.holders[0].owner).toBe('holder-wallet');
     expect(snapshot.relationships.some((item) => item.type === 'pool')).toBe(true);
+    expect(snapshot.relationships.some((item) => item.from === 'solana:address:holder-wallet')).toBe(true);
   });
 });

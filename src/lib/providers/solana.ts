@@ -534,12 +534,38 @@ export async function solana(
               return;
             }
             const rows = result.value;
+            const holderAccounts = rows.length
+              ? await attempt("Resolving holder wallets", () =>
+                  call(
+                    "getMultipleAccounts",
+                    [
+                      rows.map((h) => h.address),
+                      { encoding: "jsonParsed", commitment: "confirmed" },
+                    ],
+                    z.object({
+                      context: z.object({ slot: z.number() }),
+                      value: z.array(account.nullable()),
+                    }),
+                  ),
+                )
+              : undefined;
             for (const [i, h] of rows.entries()) {
               const e = addEntity(r, h.address, "tokenAccount");
+              const holderAccount = holderAccounts?.value[i];
+              const owner =
+                holderAccount && !Array.isArray(holderAccount.data) &&
+                typeof holderAccount.data.parsed.info.owner === "string"
+                  ? holderAccount.data.parsed.info.owner
+                  : undefined;
+              const ownerEntity = owner
+                ? r.entities.find((item) => item.value === owner) ??
+                  addEntity(r, owner, "wallet")
+                : undefined;
               const id = `holder:${a}:${h.address}:${result.context.slot}`;
               const pct = percent(h.amount, mint.data.supply);
               r.token!.holders.push({
                 address: h.address,
+                owner,
                 raw: h.amount,
                 percent: pct,
                 findingId: id,
@@ -547,8 +573,8 @@ export async function solana(
               addFinding(r, {
                 id,
                 title: `Top account #${i + 1}: ${pct.toFixed(2)}%`,
-                description: `${units(h.amount, mint.data.decimals)} tokens in a token account. Accounts are not unique beneficial owners; exchange, escrow and liquidity identities are unverified.`,
-                entityIds: [r.root.id, e.id],
+                description: `${units(h.amount, mint.data.decimals)} tokens in token account ${h.address}.${owner ? ` On-chain account owner: ${owner}.` : " Owner unavailable."} This does not establish beneficial ownership; exchange, escrow and liquidity identities are unverified.`,
+                entityIds: [r.root.id, e.id, ...(ownerEntity ? [ownerEntity.id] : [])],
                 source: source(
                   r,
                   `https://solscan.io/token/${a}#holders`,
@@ -563,6 +589,14 @@ export async function solana(
                 type: "holding",
                 findingId: id,
               });
+              if (ownerEntity)
+                r.relationships.push({
+                  id: `holder-owner:${id}`,
+                  from: ownerEntity.id,
+                  to: e.id,
+                  type: "holding",
+                  findingId: id,
+                });
             }
             const sum = (n: number) =>
               percent(
