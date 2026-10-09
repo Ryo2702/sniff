@@ -3,6 +3,7 @@ export function base58Bytes(s:string){let n=0n;for(const c of s){const i='123456
 export function classify(input:string):Target{
  const value=input.trim();if(!value||value.length>2048)throw new Error('Enter an address, transaction, URL, X handle, or project name.');
  if(/^0x[\da-f]+$/i.test(value))throw new Error('This workspace supports Solana mainnet. EVM addresses are not supported.');
+ const padreMarket=value.match(/^https?:\/\/trade\.padre\.gg\/trade\/solana\/([1-9A-HJ-NP-Za-km-z]{32,44})(?:[\/?#]|$)/i);if(padreMarket&&base58Bytes(padreMarket[1])===32)return {kind:'address',value:padreMarket[1]};
  if(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value)&&base58Bytes(value)===32)return {kind:'address',value};
  if(/^[1-9A-HJ-NP-Za-km-z]{85,88}$/.test(value)&&base58Bytes(value)===64)return {kind:'transaction',value};
  if(/^@[a-zA-Z0-9_]{1,15}$/.test(value))return {kind:'social',value:`https://x.com/${value.slice(1).toLowerCase()}`};

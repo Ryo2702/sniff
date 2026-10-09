@@ -10,6 +10,13 @@ describe('SNIFF input detection', () => {
     expect(classify('https://example.com/project').kind).toBe('website');
   });
 
+  it('unwraps Padre Solana market links to the market address', () => {
+    expect(classify('https://trade.padre.gg/trade/solana/6Scr6DJM5q3m58YfLm6zsNffMD5GByL5MgyMc4DUUXMX')).toEqual({
+      kind: 'address',
+      value: '6Scr6DJM5q3m58YfLm6zsNffMD5GByL5MgyMc4DUUXMX',
+    });
+  });
+
   it('keeps OCR candidates bounded and normalizes handles', () => {
     const candidates = extractCandidates('See @Solana and https://example.com/path, $SNIFF');
     expect(candidates.map((candidate) => candidate.value)).toContain('https://x.com/solana');
